@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Britton Admin | لوحة التحكم</title>
+<style>
+:root{--bg:#09070d;--panel:#12101a;--panel2:#191523;--gold:#d7b35a;--gold2:#f3d98a;--purple:#8b5cf6;--text:#f7f3ea;--muted:#a8a1b3;--danger:#ef5b68}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 5%,#24153b 0,#09070d 35%);color:var(--text);font-family:Arial,sans-serif}header{padding:22px 18px;border-bottom:1px solid #2a2434;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#0b0910eF;backdrop-filter:blur(12px);z-index:5}.brand{font-size:22px;font-weight:800}.brand span{color:var(--gold)}main{max-width:1100px;margin:auto;padding:20px}.card{background:linear-gradient(145deg,#15111d,#0f0d15);border:1px solid #2b2437;border-radius:20px;padding:18px;margin-bottom:18px;box-shadow:0 15px 45px #0005}.hero{border-color:#4a356b}.hero h1{margin:0 0 8px;font-size:28px}.muted{color:var(--muted);font-size:14px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{padding:16px;border-radius:16px;background:#191522;border:1px solid #30263e}.stat b{display:block;font-size:25px;color:var(--gold2);margin-top:5px}label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}input,textarea{width:100%;background:#0b0910;border:1px solid #332b40;color:white;border-radius:12px;padding:12px;font-size:15px;outline:none}input:focus,textarea:focus{border-color:var(--purple)}button{border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}.primary{background:linear-gradient(135deg,var(--gold),#9e792c);color:#110d08}.secondary{background:#241b32;color:#eee;border:1px solid #4a356b}.danger{background:#35151b;color:#ffb1b7}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.product{display:grid;grid-template-columns:72px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #292330}.product:last-child{border-bottom:0}.thumb{width:72px;height:72px;border-radius:12px;object-fit:cover;background:#211b2b}.actions{display:flex;gap:7px}.hidden{display:none}.notice{padding:12px;border-radius:12px;background:#22182e;color:#ddd;margin-bottom:12px}.login{max-width:460px;margin:70px auto}.price{color:var(--gold2);font-weight:800}@media(max-width:700px){.grid,.stats{grid-template-columns:1fr}.product{grid-template-columns:58px 1fr}.actions{grid-column:2}.thumb{width:58px;height:58px}}
+</style>
+</head>
+<body>
+<header><div class="brand">BRITTON <span>ADMIN</span></div><button id="logout" class="secondary hidden">تسجيل الخروج</button></header>
+
+<main>
+<section id="login" class="card login">
+  <h2>دخول لوحة بريتون</h2>
+  <p class="muted">أدخل حساب المدير الذي أنشأته في Supabase.</p>
+  <div id="loginMsg" class="notice hidden"></div>
+  <label>البريد الإلكتروني</label><input id="email" type="email" autocomplete="email">
+  <label>كلمة المرور</label><input id="password" type="password" autocomplete="current-password">
+  <br><br><button id="loginBtn" class="primary" style="width:100%">دخول آمن</button>
+</section>
+
+<section id="app" class="hidden">
+  <div class="card hero">
+    <h1>لوحة تحكم بريتون ✦</h1>
+    <div class="muted">إدارة المنتجات والمخزون من الجوال.</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">المنتجات<b id="count">0</b></div>
+    <div class="stat">النشطة<b id="activeCount">0</b></div>
+    <div class="stat">المخزون<b id="stockCount">0</b></div>
+  </div>
+
+  <div class="card">
+    <h2 id="formTitle">إضافة منتج</h2>
+    <div id="formMsg" class="notice hidden"></div>
+    <div class="grid">
+      <div><label>اسم المنتج</label><input id="name"></div>
+      <div><label>السعر</label><input id="price" type="number" step="0.01" min="0"></div>
+      <div><label>المخزون</label><input id="stock" type="number" step="1" min="0" value="0"></div>
+      <div><label>رابط صورة المنتج</label><input id="image_url" type="url" placeholder="https://..."></div>
+    </div>
+    <label>الوصف</label><textarea id="description" rows="3"></textarea>
+    <br><br><div class="row"><button id="saveBtn" class="primary">حفظ المنتج</button><button id="cancelBtn" class="secondary hidden">إلغاء التعديل</button></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><h2>المنتجات</h2><button id="refresh" class="secondary">تحديث</button></div>
+    <div id="list"><p class="muted">جارٍ التحميل...</p></div>
+  </div>
+</section>
+</main>
+
+<script type="module">
+import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+/*
+  IMPORTANT:
+  Replace the two values below with your Supabase project URL and anon/publishable key.
+  Do NOT put a service_role/secret key here.
+*/
+const SUPABASE_URL = 'ضع_رابط_مشروع_Supabase_هنا';
+const SUPABASE_ANON_KEY = 'ضع_مفتاح_anon_أو_publishable_هنا';
+
+const configured = !SUPABASE_URL.includes('ضع_') && !SUPABASE_ANON_KEY.includes('ضع_');
+const sb = configured ? createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
+
+const $=id=>document.getElementById(id);
+let editingId=null;
+
+function msg(id,text,show=true){$(id).textContent=text;$(id).classList.toggle('hidden',!show)}
+function formData(){return {
+ name:$('name').value.trim(), price:Number($('price').value||0),
+ stock:Number($('stock').value||0), image_url:$('image_url').value.trim(),
+ description:$('description').value.trim()
+}}
+function resetForm(){editingId=null;$('formTitle').textContent='إضافة منتج';['name','price','image_url','description'].forEach(x=>$(x).value='');$('stock').value=0;$('cancelBtn').classList.add('hidden');$('saveBtn').textContent='حفظ المنتج'}
+
+async function check(){
+ if(!configured){msg('loginMsg','أولاً ضع رابط Supabase و مفتاح anon/publishable داخل هذا الملف.',true);return}
+ const {data:{session}}=await sb.auth.getSession();
+ if(session) showApp(); else showLogin();
+}
+function showApp(){$('login').classList.add('hidden');$('app').classList.remove('hidden');$('logout').classList.remove('hidden');load()}
+function showLogin(){$('login').classList.remove('hidden');$('app').classList.add('hidden');$('logout').classList.add('hidden')}
+
+$('loginBtn').onclick=async()=>{
+ if(!configured)return msg('loginMsg','أكمل بيانات Supabase داخل الملف أولاً.');
+ const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+ if(error)return msg('loginMsg','فشل الدخول: '+error.message);
+ msg('loginMsg','');showApp();
+};
+$('logout').onclick=async()=>{await sb.auth.signOut();showLogin()};
+$('refresh').onclick=load;
+$('cancelBtn').onclick=resetForm;
+
+$('saveBtn').onclick=async()=>{
+ if(!configured)return;
+ const d=formData();
+ if(!d.name)return msg('formMsg','اكتب اسم المنتج.');
+ let res;
+ if(editingId) res=await sb.from('products').update(d).eq('id',editingId);
+ else res=await sb.from('products').insert(d);
+ if(res.error)return msg('formMsg','لم يتم الحفظ: '+res.error.message);
+ msg('formMsg','تم حفظ المنتج بنجاح.');resetForm();load();
+};
+
+async function load(){
+ const {data,error}=await sb.from('products').select('*').order('created_at',{ascending:false});
+ if(error){$('list').innerHTML='<p class="muted">تعذر تحميل المنتجات: '+error.message+'</p>';return}
+ $('count').textContent=data.length;
+ $('activeCount').textContent=data.filter(x=>x.active).length;
+ $('stockCount').textContent=data.reduce((a,x)=>a+Number(x.stock||0),0);
+ $('list').innerHTML=data.length?data.map(p=>`
+ <div class="product">
+  <img class="thumb" src="${esc(p.image_url||'')}" onerror="this.style.visibility='hidden'">
+  <div><b>${esc(p.name)}</b><div class="muted">${esc(p.description||'')}</div><div class="price">${Number(p.price).toFixed(2)}</div></div>
+  <div class="actions"><button class="secondary" data-edit="${p.id}">تعديل</button><button class="danger" data-del="${p.id}">حذف</button></div>
+ </div>`).join(''):'<p class="muted">لا توجد منتجات بعد.</p>';
+ document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(Number(b.dataset.edit),data));
+ document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>del(Number(b.dataset.del)));
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function edit(id,data){const p=data.find(x=>x.id===id);if(!p)return;editingId=id;$('formTitle').textContent='تعديل المنتج';$('name').value=p.name;$('price').value=p.price;$('stock').value=p.stock;$('image_url').value=p.image_url||'';$('description').value=p.description||'';$('cancelBtn').classList.remove('hidden');$('saveBtn').textContent='حفظ التعديل';scrollTo({top:0,behavior:'smooth'})}
+async function del(id){if(!confirm('حذف هذا المنتج؟'))return;const {error}=await sb.from('products').delete().eq('id',id);if(error)alert(error.message);else load()}
+if(configured) sb.auth.onAuthStateChange((_e,session)=>session?showApp():showLogin());
+check();
+</script>
+</body>
+</html>
